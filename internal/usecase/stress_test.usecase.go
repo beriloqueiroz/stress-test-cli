@@ -97,19 +97,19 @@ func (uc *StressTestUseCase) Execute(input StressTestUseCaseInputDTO) (*StressTe
 func validate(input StressTestUseCaseInputDTO) error {
 	msg := ""
 	if len(input.Url) < 3 {
-		msg += "invalid url"
+		msg += "invalid url; "
 	}
 
 	if input.Requests < input.Concurrency {
-		msg += "invalid request or concurrency"
+		msg += "invalid request or concurrency; "
 	}
 
 	if input.Requests == 0 {
-		msg += "invalid requests"
+		msg += "invalid requests; "
 	}
 
 	if input.Concurrency == 0 {
-		msg += "invalid concurrency"
+		msg += "invalid concurrency; "
 	}
 
 	if msg != "" {
