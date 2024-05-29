@@ -5,9 +5,9 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"sync"
 	"time"
+
+	"github.com/beriloqueiroz/stress-test-cli/internal/usecase"
 )
 
 type StatusDuration struct {
@@ -16,61 +16,24 @@ type StatusDuration struct {
 }
 
 func main() {
-	start := time.Now()
-	var statusErrors map[int]int = map[int]int{}
-	totalSuccessRequests := 0
-	totalErrorsRequests := 0
-	Requests := 500
-	Concurrency := 300
-	waitGroup := sync.WaitGroup{}
 
-	chSt := make(chan int, Concurrency)
-	go func() {
-		for x := range chSt {
-			if x == 200 {
-				totalSuccessRequests++
-				waitGroup.Done()
-				continue
-			}
-			totalErrorsRequests++
-			statusError, ok := statusErrors[x]
-			if !ok {
-				statusErrors[x] = 1
-				waitGroup.Done()
-				continue
-			}
-			statusErrors[x] = statusError + 1
-			waitGroup.Done()
-		}
-		close(chSt)
-	}()
+	stressUseCase := usecase.NewStressTest()
 
-	executed := 0
-	for {
-		concurrency := Concurrency
-		if (Requests - executed) < concurrency {
-			concurrency = Requests - executed
-		}
-		if executed >= Requests {
-			break
-		}
-		waitGroup.Add(concurrency)
-		for i := 0; i < concurrency; i++ {
-			go func() {
-				resp, _ := http.DefaultClient.Get("http://localhost:8080")
-				chSt <- resp.StatusCode
-			}()
-		}
-		waitGroup.Wait()
-		executed += concurrency
+	output, err := stressUseCase.Execute(usecase.StressTestUseCaseInputDTO{
+		Url:         "http://localhost:8080",
+		Requests:    1250,
+		Concurrency: 301,
+	})
 
+	if err != nil {
+		panic(err)
 	}
-	totalDuration := time.Now().Sub(start)
-	fmt.Println("total requests", totalSuccessRequests+totalErrorsRequests)
-	fmt.Println("total success requests", totalSuccessRequests)
-	fmt.Println("total errors requests", totalErrorsRequests)
-	fmt.Println("total duration execution", totalDuration)
-	for k, v := range statusErrors {
+
+	fmt.Println("total requests", output.TotalRequests)
+	fmt.Println("total success requests", output.TotalSuccessRequests)
+	fmt.Println("total errors requests", output.TotalRequests-output.TotalSuccessRequests)
+	fmt.Println("total duration execution", output.TotalTime)
+	for k, v := range output.ErrorRequests {
 		fmt.Printf("status code: %d = %d\n", k, v)
 	}
 }
